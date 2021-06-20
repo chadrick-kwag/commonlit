@@ -64,22 +64,16 @@ class TrainDataset(torch.utils.data.IterableDataset):
 
         encoding = tokenize_text(text, self.tokenizer, self.maxlength)
 
-        # encoding['labels'] = score
+        # remove outer axis
+        encoding['input_ids'] = encoding['input_ids'][0]
+        encoding['attention_mask'] = encoding['attention_mask'][0]
 
-        _encoding = {
-            'input_ids': encoding['input_ids'][0],
-            'attention_mask': encoding['attention_mask'][0]
-        }
+        encoding['id_str'] = id_str
+        encoding['score'] = score
 
         self.num+=1
 
-        return {
-            'encoding': _encoding,
-            'score': score,
-            'id_str': id_str
-        }
-
-        # return [encoding, score, std]
+        return encoding
 
 
         
