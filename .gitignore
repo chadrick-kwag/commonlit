@@ -5,3 +5,5 @@
 .vscode
 **/data
 **/ckpt
+**/config/**/*.yaml
+!**/config/**/*.sample.yaml

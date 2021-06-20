@@ -61,5 +61,5 @@ class ValidationCallback:
 
         if self.writer is not None:
 
-            self.writer.add_scalar(f'{self.name}_valid/mean_mse', mean_mse)
+            self.writer.add_scalar(f'{self.name}_valid/mean_mse', mean_mse, global_step)
             self.writer.flush()

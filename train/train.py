@@ -132,7 +132,7 @@ for epoch_index in range(epochs):
 
         if loss_log_interval is not None and global_step % loss_log_interval ==0:
             print(f"loss={loss.item()}")
-            writer.add_scalar('train/loss', loss.item())
+            writer.add_scalar('train/loss', loss.item(), global_step)
             writer.flush()
 
         loss.backward()
