@@ -1,0 +1,38 @@
+
+
+train_file_list:
+  - /home/chadrick/prj/kaggle/commonlit/data/train.csv
+
+
+valid_file_list:
+  - /home/chadrick/prj/kaggle/commonlit/datamanage/testoutput/sample_dataset/210613_2204/sample.csv
+
+maxlength: 256
+
+tokenizer_dirpath: /home/chadrick/prj/kaggle/commonlit/data/hfmodels/roberta-base
+
+ckpt: pretrain
+model_config_file: /home/chadrick/prj/kaggle/commonlit/data/hfmodels/roberta-base/config.json
+pretrain_dir: /home/chadrick/prj/kaggle/commonlit/data/hfmodels/roberta-base
+
+suffix: test
+
+gpu: 0
+batch_size: 4
+
+epochs: 10000
+run_valid_interval: 100
+periodic_save_interval: 100
+loss_log_interval: 2
+scheduler_interval: 50
+
+
+optimizer:
+  type: adam
+  lr: 1.e-5
+
+
+scheduler:
+  type: CosineAnnealingLR
+  T_max: 100
+  eta_min: 1.e-7

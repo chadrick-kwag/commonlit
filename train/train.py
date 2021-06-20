@@ -1,4 +1,5 @@
-import os, sys, torch, datetime, numpy as np, collections
+import os, sys, torch, datetime, numpy as np, collections, argparse, yaml, copy, shutil
+from munch import munchify
 
 from torch._six import string_classes
 
@@ -21,36 +22,47 @@ from callback.SaveReceiver import MetricTrackSaveReceiver
 
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument('config', type=str, help='config file path')
 
-train_file_list = [
-    '/home/chadrick/prj/kaggle/commonlit/data/train.csv'
-]
+args = parser.parse_args()
 
-valid_file_list = [ 
-    '/home/chadrick/prj/kaggle/commonlit/datamanage/testoutput/sample_dataset/210613_2204/sample.csv'
-]
+with open(args.config, 'r') as fd:
+    config = yaml.load(fd)
 
-maxlength = 256
-
+config = munchify(config)
 
 
 
-tokenizer = RobertaTokenizer.from_pretrained("/home/chadrick/prj/kaggle/commonlit/data/hfmodels/roberta-base")
 
 
+tokenizer = RobertaTokenizer.from_pretrained(config.tokenizer_dirpath)
 
-model = Model_v1.from_pretrained('/home/chadrick/prj/kaggle/commonlit/data/hfmodels/roberta-base')
 
-train_dataset = TrainDataset(train_file_list, tokenizer, maxlength)
-valid_dataset = TrainDataset(valid_file_list, tokenizer, maxlength)
+if config.ckpt == 'pretrain':
 
-train_dataloader = DataLoader(train_dataset, batch_size=4)
-valid_dataloader = DataLoader(valid_dataset, batch_size=4 )
+    model = Model_v1.from_pretrained(config.pretrain_dir)
+elif config.ckpt is not None:
+    model = Model_v1.from_pretrained(None, config= config.model_config_file, state_dict=config.ckpt)
+else:
+    # init from scratch
+    model = Model_v1.from_pretrained(None, config= config.model_config_file, state_dict={})
+
+train_dataset = TrainDataset(config.train_file_list, tokenizer, config.maxlength)
+valid_dataset = TrainDataset(config.valid_file_list, tokenizer, config.maxlength)
+
+train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size)
+valid_dataloader = DataLoader(valid_dataset, batch_size=config.batch_size)
 
 
 timestamp=datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-outputdir = f'ckpt/train/{timestamp}'
+outputdir = f'ckpt/train/{timestamp}_{config.suffix}'
 os.makedirs(outputdir)
+
+# copy used config file
+
+savepath = os.path.join(outputdir, 'usedconfig.yaml')
+shutil.copy2(args.config, savepath)
 
 
 log_dir = os.path.join(outputdir, 'logs')
@@ -66,10 +78,22 @@ valid_callback = ValidationCallback(model, valid_dataloader, 'valid', mse_subscr
 
 periodic_save_callback = ManualSaveCallback(model, os.path.join(outputdir, 'periodic_save'))
 
+if config.optimizer.type == 'adam':
+    kwargs = vars(config.optimizer)
+    del kwargs['type']
 
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), **kwargs)
+else:
+    raise Exception(f'not supported optimizer type: {config.optimizer.type}')
 
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100, 1e-7)
+
+
+if config.scheduler.type == 'CosineAnnealingLR':
+    kwargs = vars(config.scheduler)
+    del kwargs['type']
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, **kwargs)
+else:
+    raise Exception(f'not supported scheduler type: {config.scheduler.type}')
 
 
 
@@ -81,12 +105,12 @@ else:
     device = torch.device(f'cuda:{gpu}')
 
 
-epochs = 10000
-run_valid_interval = 100
-periodic_save_interval = 100
-loss_log_interval = 2
+epochs = config.epochs
+run_valid_interval = config.run_valid_interval
+periodic_save_interval = config.periodic_save_interval
+loss_log_interval = config.loss_log_interval
 
-scheduler_interval = 10
+scheduler_interval = config.scheduler_interval
 
 
 

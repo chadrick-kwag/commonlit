@@ -6,4 +6,4 @@
 **/data
 **/ckpt
 **/config/**/*.yaml
-!**/config/**/*.sample.yaml
+!**/config/**/*sample.yaml
