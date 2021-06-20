@@ -3,13 +3,15 @@ from torch.utils.tensorboard import SummaryWriter
 
 class ValidationCallback:
 
-    def __init__(self, model, dataloader, writer: SummaryWriter = None, mse_subscribers = [], name=None):
+    def __init__(self, model, dataloader, name, writer: SummaryWriter = None, mse_subscribers = []):
 
         self.model = model
         self.dataloader = dataloader
         self.writer = writer
 
         self.mse_subscribers = mse_subscribers
+        assert name is not None and name != "", 'invalid name'
+        self.name = name
 
     def run(self, global_step):
 
@@ -52,7 +54,7 @@ class ValidationCallback:
 
         mean_mse = np.array(mse_list).mean()
 
-
+        print(f"mean_mse={mean_mse}")
 
         for a in self.mse_subscribers:
             a.notify(mean_mse, global_step)

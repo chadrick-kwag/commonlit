@@ -5,15 +5,19 @@ from torch._six import string_classes
 from torch.utils.data.dataloader import DataLoader
 from transformers import RobertaConfig, RobertaModel, RobertaTokenizer
 from tqdm import tqdm
+
+
+from torch.utils.tensorboard import SummaryWriter
+
+
+sys.path.append(os.path.abspath(".."))
+
+from model.v1 import Model_v1
 from dataprovider.dataset import TrainDataset
 
 from callback.validcallback import ValidationCallback
-from callback.SaveReceiver import MetricTrackSaveReceiver, ManualSaveReceiver
-
-
-# sys.path.append(os.path.abspath(".."))
-
-from model.v1 import Model_v1
+from callback.ManualSaveCallback import ManualSaveCallback
+from callback.SaveReceiver import MetricTrackSaveReceiver
 
 
 
@@ -49,9 +53,18 @@ outputdir = f'ckpt/train/{timestamp}'
 os.makedirs(outputdir)
 
 
+log_dir = os.path.join(outputdir, 'logs')
+os.makedirs(log_dir)
+
+writer = SummaryWriter(log_dir)
+
+
 mean_mse_save_receiver = MetricTrackSaveReceiver(model, os.path.join(outputdir, 'valid_mean_mse_save'), 'mse', 'min')
 
-valid_callback = ValidationCallback(model, valid_dataloader, mse_subscribers=[mean_mse_save_receiver])
+valid_callback = ValidationCallback(model, valid_dataloader, 'valid', mse_subscribers=[mean_mse_save_receiver], writer=writer)
+
+
+periodic_save_callback = ManualSaveCallback(model, os.path.join(outputdir, 'periodic_save'))
 
 
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
@@ -68,9 +81,9 @@ else:
     device = torch.device(f'cuda:{gpu}')
 
 
-epochs = 100
-run_valid_interval = 2
-periodic_save_interval = 2
+epochs = 10000
+run_valid_interval = 100
+periodic_save_interval = 100
 loss_log_interval = 2
 
 scheduler_interval = 10
@@ -119,41 +132,21 @@ for epoch_index in range(epochs):
 
         if loss_log_interval is not None and global_step % loss_log_interval ==0:
             print(f"loss={loss.item()}")
+            writer.add_scalar('train/loss', loss.item())
+            writer.flush()
 
         loss.backward()
 
         optimizer.step()
 
 
-
         if global_step % run_valid_interval == 0:
 
             valid_callback.run(global_step)
 
-            # model.eval()
-
-            # mse_list = []
-            
-            # for data in valid_dataloader:
-
-            #     encoding, score, std = data
-
-            #     with torch.no_grad():
-            #         outputs = model(**encoding)
-
-            #     logits = outputs.cpu().numpy()
-
-            #     mse_arr = (np.square(logits - score)).mean(axis=-1)
-
-            #     mse_list.extend(mse_arr.tolist())
-            
-
-            # mean_mse = sum(mse_list) / len(mse_list)
-
-            # print(f"mean mse: {mean_mse}")
-
-            # model.train()
 
         if scheduler_interval is not None and global_step % scheduler_interval == 0 :
-
             scheduler.step()
+
+        if periodic_save_interval is not None and global_step % periodic_save_interval==0:
+            periodic_save_callback.run(global_step)
