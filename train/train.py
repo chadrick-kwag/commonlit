@@ -43,7 +43,7 @@ if config.ckpt == 'pretrain':
 
     model = Model_v1.from_pretrained(config.pretrain_dir)
 elif config.ckpt is not None:
-    model = Model_v1.from_pretrained(None, config= config.model_config_file, state_dict=config.ckpt)
+    model = Model_v1.from_pretrained(None, config= config.model_config_file, state_dict=torch.load(config.ckpt))
 else:
     # init from scratch
     model = Model_v1.from_pretrained(None, config= config.model_config_file, state_dict={})
@@ -152,7 +152,8 @@ for epoch_index in range(epochs):
         score = data['score'].to(device).unsqueeze(-1)
 
 
-        loss = torch.log(torch.square(outputs - score)).mean()
+        # loss = torch.log(torch.square(outputs - score)).mean()
+        loss = torch.square(outputs - score).mean()
 
         if loss_log_interval is not None and global_step % loss_log_interval ==0:
             print(f"loss={loss.item()}")

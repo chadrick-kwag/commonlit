@@ -1,10 +1,19 @@
 import torch, csv
 
 
+def get_data_from_csv_file_for_predict(f, id_str_index=0, text_index=3):
+
+    with open(f, 'r') as fd:
+        reader = csv.reader(fd)
+
+        lines = list(reader)
+
+    data = [(a[id_str_index], a[text_index]) for a in lines[1:]] #idstr, text
+
+    return data
+
 
 def get_data_from_csv_file(f):
-
-    file = '/home/chadrick/prj/kaggle/commonlit/data/train.csv'
 
 
     with open(f, 'r') as fd:
@@ -76,4 +85,52 @@ class TrainDataset(torch.utils.data.IterableDataset):
         return encoding
 
 
+class PredictDataset(torch.utils.data.IterableDataset):
+
+    def __init__(self, file_list, tokenizer, maxlength):
+
+        super().__init__()
+
+        self.file_list = file_list
+        self.tokenizer = tokenizer
+        self.maxlength = maxlength
+
+
+        self.data = []
         
+        for f in self.file_list:
+            
+            _data = get_data_from_csv_file_for_predict(f)
+            self.data.extend(_data)
+
+    
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+
+        self.num = 0
+
+        return self
+
+    def __next__(self):
+
+        if self.num >= len(self):
+            raise StopIteration
+        
+        return_data = self.data[self.num]
+
+        id_str, text = return_data
+
+        encoding = tokenize_text(text, self.tokenizer, self.maxlength)
+
+        # remove outer axis
+        encoding['input_ids'] = encoding['input_ids'][0]
+        encoding['attention_mask'] = encoding['attention_mask'][0]
+        encoding['id_str'] = id_str
+        
+
+        self.num+=1
+
+        return encoding
+

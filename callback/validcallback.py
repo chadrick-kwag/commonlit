@@ -45,7 +45,7 @@ class ValidationCallback:
 
             gt_score_arr = data['score'].unsqueeze(-1).numpy()
 
-            mse_arr = np.sqrt(np.square(gt_score_arr - pred_score_arr))
+            mse_arr = np.square(gt_score_arr - pred_score_arr)
 
             mse_list.extend(mse_arr.tolist())
 
