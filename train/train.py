@@ -111,7 +111,9 @@ periodic_save_interval = config.periodic_save_interval
 loss_log_interval = config.loss_log_interval
 
 scheduler_interval = config.scheduler_interval
+optimize_step_interval = config.optimize_step_interval
 
+assert optimize_step_interval >0, f'not satisfacting: optimize_step_interval>0'
 
 
 global_step = 0
@@ -162,16 +164,17 @@ for epoch_index in range(epochs):
 
         loss.backward()
 
-        optimizer.step()
+        if global_step % optimize_step_interval == 0:
+            optimizer.step()
 
 
-        if global_step % run_valid_interval == 0:
+        if global_step % (run_valid_interval * optimize_step_interval) == 0:
 
             valid_callback.run(global_step)
 
 
-        if scheduler_interval is not None and global_step % scheduler_interval == 0 :
+        if scheduler_interval is not None and global_step % (scheduler_interval * optimize_step_interval) == 0 :
             scheduler.step()
 
-        if periodic_save_interval is not None and global_step % periodic_save_interval==0:
+        if periodic_save_interval is not None and global_step % (periodic_save_interval * optimize_step_interval)==0:
             periodic_save_callback.run(global_step)
